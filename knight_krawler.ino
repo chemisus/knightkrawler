@@ -372,14 +372,14 @@ class CartState {
 
 class DriveState : public CartState {
   private:
-  Actuator *left;
-  Actuator *right;
+  Wheel *left;
+  Wheel *right;
   Joystick *joystick;
   Motor *motor;
   Logger *logger;
   
   public:
-  DriveState(Actuator *left, Actuator *right, Joystick *joystick, Motor *motor, Logger *logger) {
+  DriveState(Wheel *left, Wheel *right, Joystick *joystick, Motor *motor, Logger *logger) {
     this->left = left;
     this->right = right;
     this->joystick = joystick;
@@ -391,16 +391,16 @@ class DriveState : public CartState {
     int horizontal = this->joystick->getHorizontalPosition();
     int vertical = this->joystick->getVerticalPosition();
 
-    //*    
+    /*    
     this->left->setTargetPosition(horizontal);
     this->right->setTargetPosition(horizontal);
     /**/
     
-    //*
     this->logger->print(this->joystick->getLeft());
     this->logger->print(" ");
     this->logger->print(this->joystick->getRight());
     this->logger->print(" ");
+    /*
     this->logger->print(this->left->getTargetPosition());
     this->logger->print(" ");
     this->logger->println(this->right->getTargetPosition());
@@ -483,8 +483,8 @@ class RampState : public CartState {
   }
 };
 
-Actuator* left;
-Actuator* right;
+Wheel* left;
+Wheel* right;
 Joystick* joystick;
 Button* button;
 LimitSwitch* limit_top;
@@ -535,8 +535,8 @@ void setup() {
   int* right_maps = translator->translateDown(joystick_min, joystick_origin, joystick_max, right_min, right_origin, right_max);
 
   last_state = -1;
-  left = new Actuator(new Logger(true), left_pin_in, left_pin_out_0, left_pin_out_1, left_threshold, left_min, left_origin, left_max, left_maps);
-  right = new Actuator(new Logger(true), right_pin_in, right_pin_out_0, right_pin_out_1, right_threshold, right_min, right_origin, right_max, right_maps);
+//  left = new Actuator(new Logger(true), left_pin_in, left_pin_out_0, left_pin_out_1, left_threshold, left_min, left_origin, left_max, left_maps);
+//  right = new Actuator(new Logger(true), right_pin_in, right_pin_out_0, right_pin_out_1, right_threshold, right_min, right_origin, right_max, right_maps);
   joystick = new Joystick(new Logger(true), joystick_horizontal_pin, joystick_vertical_pin, analogRead(joystick_horizontal_pin), analogRead(joystick_vertical_pin), joystick_horizontal_threshold, joystick_vertical_threshold);
   button = new Button(button_pin);
   limit_top = new LimitSwitch(limit_top_pin);
