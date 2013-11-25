@@ -9,6 +9,14 @@ class Logger {
     this->disable_all = false;
   }
   
+  void enable() {
+    this->enabled = true;
+  }
+  
+  void disable() {
+    this->enabled = false;
+  }
+  
   boolean isEnabled() {
     return this->enabled && !this->disable_all;
   }
@@ -26,13 +34,13 @@ class Logger {
   }
   
   void print(int value) {
-    if (this->enabled) {
+    if (this->isEnabled()) {
       Serial.print(value);
     }
   }
   
   void print(float value) {
-    if (this->enabled) {
+    if (this->isEnabled()) {
       Serial.print(value);
     }
   }
@@ -68,16 +76,11 @@ class Actuator {
   int pin_in;
   int pin_out_0;
   int pin_out_1;
-  int lower_bound;
-  int origin;
-  int upper_bound;
   int target_position;
   int threshold;
   
-  int* maps;
-  
   public:
-  Actuator(Logger* logger, int pin_in, int pin_out_0, int pin_out_1, int threshold, int lower_bound, int origin, int upper_bound, int* maps) {
+  Actuator(Logger* logger, int pin_in, int pin_out_0, int pin_out_1, int threshold, int target_position) {
     this->logger = logger;
     
     this->pin_in = pin_in;
@@ -85,11 +88,7 @@ class Actuator {
     this->pin_out_1 = pin_out_1;
     
     this->threshold = threshold;
-    this->lower_bound = lower_bound;
-    this->origin = origin;
-    this->upper_bound = upper_bound;
-    this->target_position = origin;
-    this->maps = maps;
+    this->target_position = target_position;
     
     pinMode(pin_out_0, OUTPUT);
     pinMode(pin_out_1, OUTPUT);
@@ -111,9 +110,6 @@ class Actuator {
   }
   
   void setTargetPosition(int value) {
-    value = min(value, this->upper_bound);
-    value = max(value, this->lower_bound);
-    
     this->target_position = value;
   }
   
@@ -178,7 +174,9 @@ class Joystick {
   }
   
   int getHorizontalPosition() {
-    return analogRead(this->pin_h);
+    int value = analogRead(this->pin_h);
+    
+    return value;
   }
   
   int getVerticalPosition() {
@@ -194,11 +192,11 @@ class Joystick {
   }
   
   boolean isLeft() {
-    return this->getHorizontalPosition() > (this->origin_h + this->threshold_h);
+    return this->getHorizontalPosition() < (this->origin_h - this->threshold_h);
   }
   
   boolean isRight() {
-    return this->getHorizontalPosition() > (this->origin_h - this->threshold_h);
+    return this->getHorizontalPosition() > (this->origin_h + this->threshold_h);
   }
 
   float getLeft() {
@@ -216,43 +214,6 @@ class Joystick {
   float getDown() {
     return (this->getVerticalPosition() - this->origin_v) / (float)(this->max_v - this->origin_v);
   }
-};
-
-class Translator {
-  public:
-  int* translateUp(int from_min, int from_origin, int from_max, int to_min, int to_origin, int to_max) {
-    int* values = (int*)malloc(sizeof(int) * (from_max - from_min));
-
-    int i = 0;    
-    for (int k = from_min; k < from_origin; k++) {
-      values[i] = map(k, from_min, from_origin, to_min, to_origin);
-      i++;
-    }
-
-    for (int k = from_origin; k < from_max; k++) {
-      values[i] = map(k, from_origin, from_max, to_origin, to_max);
-      i++;
-    }
-    
-    return values;
-  };
-
-  int* translateDown(int from_min, int from_origin, int from_max, int to_min, int to_origin, int to_max) {
-    int* values = (int*)malloc(sizeof(int) * (from_max - from_min));
-
-    int i = from_max - from_min - 1;
-    for (int k = from_min; k < from_origin; k++) {
-      values[i] = map(k, from_min, from_origin, to_min, to_origin);
-      i--;
-    }
-    
-    for (int k = from_origin; k < from_max; k++) {
-      values[i] = map(k, from_origin, from_max, to_origin, to_max);
-      i--;
-    }
-    
-    return values;
-  };
 };
 
 class Button {
@@ -273,13 +234,15 @@ class Button {
 
 class Wheel {
   private:
+  Logger* logger;
   Actuator* actuator;
   int min;
   int origin;
   int max;
   
   public:
-  Wheel(Actuator* actuator, int min, int origin, int max) {
+  Wheel(Logger* logger, Actuator* actuator, int min, int origin, int max) {
+    this->logger = logger;
     this->actuator = actuator;
     this->min = min;
     this->origin = origin;
@@ -287,11 +250,19 @@ class Wheel {
   }
   
   void turnInside(float percent) {
-    this->actuator->setTargetPosition(percent * (this->origin - this->min) + this->min);
+    this->actuator->setTargetPosition(this->origin - (this->origin - this->min) * percent);
   }
   
   void turnOutside(float percent) {
-    this->actuator->setTargetPosition(percent * (this->max - this->origin) + this->origin);
+    this->actuator->setTargetPosition((this->max - this->origin) * percent + this->origin);
+  }
+  
+  int getTargetPosition() {
+    return this->actuator->getTargetPosition();
+  }
+  
+  int getCurrentPosition() {
+    return this->actuator->getPosition();
   }
   
   void stay() {
@@ -388,23 +359,30 @@ class DriveState : public CartState {
   }
   
   void loop() {
-    int horizontal = this->joystick->getHorizontalPosition();
-    int vertical = this->joystick->getVerticalPosition();
+    if (this->joystick->isRight()) {
+      this->logger->print("right ");
+      
+      float value = this->joystick->getRight();
 
-    /*    
-    this->left->setTargetPosition(horizontal);
-    this->right->setTargetPosition(horizontal);
-    /**/
+      this->left->turnInside(value);
+      this->right->turnOutside(value);
+    } else if (this->joystick->isLeft()) {
+      this->logger->print("left ");
+      
+      float value = this->joystick->getLeft();
+
+      this->left->turnOutside(value);
+      this->right->turnInside(value);
+    } else {
+      this->left->turnInside(0);
+      this->right->turnInside(0);
+    }
     
     this->logger->print(this->joystick->getLeft());
     this->logger->print(" ");
-    this->logger->print(this->joystick->getRight());
+    this->logger->print(this->left->getCurrentPosition());
     this->logger->print(" ");
-    /*
-    this->logger->print(this->left->getTargetPosition());
-    this->logger->print(" ");
-    this->logger->println(this->right->getTargetPosition());
-    /**/
+    this->logger->println(this->right->getCurrentPosition());
 
     this->left->update();
     this->right->update();
@@ -412,7 +390,7 @@ class DriveState : public CartState {
     this->motor->drive(vertical);
     /**/
 
-    delay(20);
+    delay(10);
   }
   
   void start() {
@@ -422,9 +400,9 @@ class DriveState : public CartState {
   void stop() {
     this->logger->println("Stopping drive state");
     
-    /*
     this->left->stay();
     this->right->stay();
+    /*
     this->motor->drive(512);
     /**/
   }
@@ -438,37 +416,36 @@ class RampState : public CartState {
   Relay* relay_up;
   Relay* relay_down;
   Logger* logger;
+  Relay* relay_joystick_switch1;
+  Relay* relay_joystick_switch2;
   
   public:
-  RampState(LimitSwitch *limit_top, LimitSwitch *limit_bottom, Joystick *joystick, Relay *relay_up, Relay *relay_down, Logger *logger) {
+  RampState(LimitSwitch *limit_top, LimitSwitch *limit_bottom, Joystick *joystick, Relay *relay_up, Relay *relay_down, Logger *logger, Relay* relay_joystick_switch1, Relay* relay_joystick_switch2) {
     this->limit_top = limit_top;
     this->limit_bottom = limit_bottom;
     this->joystick = joystick;
     this->relay_up = relay_up;
     this->relay_down = relay_down;
     this->logger = logger;
+    this->relay_joystick_switch1 = relay_joystick_switch1;
+    this->relay_joystick_switch2 = relay_joystick_switch2;
   }
   
   void loop() {
-    this->logger->println(this->joystick->getVerticalPosition());
-
-    if (this->joystick->isUp()) {
-      this->logger->println("going up");
-      //*
+    this->logger->println(this->joystick->getVerticalPosition());    
+    
+    if (this->limit_bottom->isOff()) {
+      this->relay_up->off();
+      this->relay_down->off();
+    } else if (this->joystick->isUp()) {
       this->relay_down->off();
       this->relay_up->on();
-      /**/
-    } else if (this->joystick->isDown() && !this->limit_bottom->isOff()) {
-      this->logger->println("going down");
-      //*
+    } else if (this->joystick->isDown()) {
       this->relay_up->off();
       this->relay_down->on();
-      /**/
     } else {
-      //*
       this->relay_up->off();
       this->relay_down->off();
-      /**/
     }
     
     delay(10);
@@ -476,10 +453,17 @@ class RampState : public CartState {
   
   void start() {
     this->logger->println("Starting ramp state");
+    this->relay_joystick_switch1->on();
+    this->relay_joystick_switch2->on();
   }
   
   void stop() {
     this->logger->println("Stopping ramp state");
+
+    this->relay_up->off();
+    this->relay_down->off();
+    this->relay_joystick_switch1->off();
+    this->relay_joystick_switch2->off();
   }
 };
 
@@ -498,16 +482,15 @@ int last_state;
 void setup() {
   Serial.begin(9600);
 
-  Translator *translator = new Translator();
-  
-  int joystick_min = 0;
-  int joystick_origin = 498;
-  int joystick_max = 1024 / 4;
-  int joystick_horizontal_pin = A2; // ?
-  int joystick_vertical_pin = A3; // ?
+  int joystick_horizontal_pin = A3; // ?
+  int joystick_vertical_pin = A2; // ?
   int joystick_horizontal_threshold = 3;
   int joystick_vertical_threshold = 3;
-  
+  int joystick_horizontal_origin = analogRead(joystick_horizontal_pin);
+  int joystick_vertical_origin = 532; //analogRead(joystick_vertical_pin);
+  int joystick_relay_switch1 = 8;
+  int joystick_relay_switch2 = 9;
+
   int button_pin = 13;
   int limit_top_pin = -2; // ?
   int limit_bottom_pin = 12;
@@ -515,40 +498,34 @@ void setup() {
   int relay_down_pin = 7; // ?
   
   int left_pin_in = A1; // ?
-  int left_pin_out_0 = 2; // ?
-  int left_pin_out_1 = 3; // ?
+  int left_pin_out_0 = 5; // ?
+  int left_pin_out_1 = 4; // ?
   int left_threshold = 7;
   int left_min = 397;
   int left_origin = 478;
   int left_max = 685;
-
-  int* left_maps = translator->translateUp(joystick_min, joystick_origin, joystick_max, left_min, left_origin, left_max);
   
   int right_pin_in = A0;
-  int right_pin_out_0 = 4;
-  int right_pin_out_1 = 5;
+  int right_pin_out_0 = 3;
+  int right_pin_out_1 = 2;
   int right_threshold = 4;
   int right_min = 321;
   int right_origin = 428;
   int right_max = 645;
 
-  int* right_maps = translator->translateDown(joystick_min, joystick_origin, joystick_max, right_min, right_origin, right_max);
-
   last_state = -1;
-//  left = new Actuator(new Logger(true), left_pin_in, left_pin_out_0, left_pin_out_1, left_threshold, left_min, left_origin, left_max, left_maps);
-//  right = new Actuator(new Logger(true), right_pin_in, right_pin_out_0, right_pin_out_1, right_threshold, right_min, right_origin, right_max, right_maps);
-  joystick = new Joystick(new Logger(true), joystick_horizontal_pin, joystick_vertical_pin, analogRead(joystick_horizontal_pin), analogRead(joystick_vertical_pin), joystick_horizontal_threshold, joystick_vertical_threshold);
+  left = new Wheel(new Logger(), new Actuator(new Logger(), left_pin_in, left_pin_out_0, left_pin_out_1, left_threshold, left_origin), left_min, left_origin, left_max);
+  right = new Wheel(new Logger(), new Actuator(new Logger(), right_pin_in, right_pin_out_0, right_pin_out_1, right_threshold, right_origin), right_min, right_origin, right_max);
+  joystick = new Joystick(new Logger(), joystick_horizontal_pin, joystick_vertical_pin, joystick_horizontal_origin, joystick_vertical_origin, joystick_horizontal_threshold, joystick_vertical_threshold);
   button = new Button(button_pin);
   limit_top = new LimitSwitch(limit_top_pin);
   limit_bottom = new LimitSwitch(limit_bottom_pin);
   relay_up = new Relay(relay_up_pin);
   relay_down = new Relay(relay_down_pin);
-  motor = new Motor(new Logger(true));
+  motor = new Motor(new Logger());
   
-  cart_states[0] = new DriveState(left, right, joystick, motor, new Logger(true));  
-  cart_states[1] = new RampState(limit_top, limit_bottom, joystick, relay_up, relay_down, new Logger(true));
-  
-  delete translator;
+  cart_states[0] = new DriveState(left, right, joystick, motor, new Logger());  
+  cart_states[1] = new RampState(limit_top, limit_bottom, joystick, relay_up, relay_down, new Logger(true), new Relay(joystick_relay_switch1), new Relay(joystick_relay_switch1));
 }
 
 void loop() {
