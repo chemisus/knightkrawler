@@ -1,3 +1,24 @@
+
+#define LEFT_MIN 425
+// origin
+// less is to the right
+// 510 was slightly to the right
+// 550 was slightly to the right
+// 580 was to the left but could reverse
+// 565 was slightly to the left
+#define LEFT_ORIGIN 580
+#define LEFT_MAX 700
+
+#define RIGHT_MIN 321
+// origin
+// more is to the right
+// 428 was slightly to the right.
+// 380 was slightly to the right
+// 350 was to the left but could reverse
+// 365 was slightly to the left
+#define RIGHT_ORIGIN 350
+#define RIGHT_MAX 645
+
 class Logger {
   private:
   boolean enabled;
@@ -501,18 +522,18 @@ void setup() {
   int left_pin_out_0 = 5; // ?
   int left_pin_out_1 = 4; // ?
   int left_threshold = 7;
-  int left_min = 397;
-  int left_origin = 478;
-  int left_max = 685;
+  int left_min = LEFT_MIN;
+  int left_origin = LEFT_ORIGIN;
+  int left_max = LEFT_MAX;
   
   int right_pin_in = A0;
   int right_pin_out_0 = 3;
   int right_pin_out_1 = 2;
   int right_threshold = 4;
-  int right_min = 321;
-  int right_origin = 428;
-  int right_max = 645;
-
+  int right_min = RIGHT_MIN;
+  int right_origin = RIGHT_ORIGIN;
+  int right_max = RIGHT_MAX;
+  
   last_state = -1;
   left = new Wheel(new Logger(), new Actuator(new Logger(), left_pin_in, left_pin_out_0, left_pin_out_1, left_threshold, left_origin), left_min, left_origin, left_max);
   right = new Wheel(new Logger(), new Actuator(new Logger(), right_pin_in, right_pin_out_0, right_pin_out_1, right_threshold, right_origin), right_min, right_origin, right_max);
