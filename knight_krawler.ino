@@ -3,9 +3,6 @@
  *
  */
 
-#define JOYSTICK_HORIZONTAL_ORIGIN analogRead(joystick_horizontal_pin)
-#define JOYSTICK_VERTICAL_ORIGIN 532
-                              
 /**
  * @const {int} LEFT_MIN          defines the minimum value (how far to the right) the left tire's actuator can be set to.
  * @const {int} LEFT_ORIGIN       defines the origin value the left tire's actuator should use to drive straight.
@@ -17,8 +14,10 @@
  * @const {int} RIGHT_MAX         defines the maximum value (how far to the right) the right tire's actuator can be set to.
  * As the right values go from 0 -> 1023, the right tire turns from the left to the right.
  *
- * @const {int} LEFT_THRESHOLD    
- * @const {int} RIGHT_THRESHOLD   
+ * @const {int} LEFT_THRESHOLD    defines the range for the left actuator to land in to satisfy the target position.
+ * @const {int} RIGHT_THRESHOLD   defines the range for the right actuator to land in to satisfy the target position.
+ * Threshold example:
+ *   If the target position is 480, and the threshold is 5, then any actuator position between 475 and 485 will satisfy. 
  *
  * Origin Calibration History:
  *   (left, right)
@@ -37,6 +36,23 @@
 #define RIGHT_MAX 645
 #define RIGHT_THRESHOLD 4
 
+/**
+ * @const {int} JOYSTICK_HORIZONTAL_ORIGIN  
+ * @const {int} JOYSTICK_VERTICAL_ORIGIN    
+ *
+ * Note:
+ * You can use analogRead(joystick_horizontal_pin) or analogRead(joystick_vertical_pin) to set the origin values
+ * to the position where the joystick is at when the program first starts. HOWEVER, this has caused problems before,
+ * so it might need to be set to a constant value.
+ *
+ */
+#define JOYSTICK_HORIZONTAL_ORIGIN analogRead(joystick_horizontal_pin)
+#define JOYSTICK_VERTICAL_ORIGIN 532
+
+/**
+ *
+ *
+ */
 class Logger {
   private:
   boolean enabled;
