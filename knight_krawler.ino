@@ -1,23 +1,41 @@
+/**
+ * @author Terrence Howard <chemisus@gmail.com>
+ *
+ */
 
+#define JOYSTICK_HORIZONTAL_ORIGIN analogRead(joystick_horizontal_pin)
+#define JOYSTICK_VERTICAL_ORIGIN 532
+                              
+/**
+ * @const {int} LEFT_MIN          defines the minimum value (how far to the right) the left tire's actuator can be set to.
+ * @const {int} LEFT_ORIGIN       defines the origin value the left tire's actuator should use to drive straight.
+ * @const {int} LEFT_MAX          defines the maximum value (how far to the left) the left tire's actuator can be set to.
+ * As the left values go from 0 -> 1023, the left tire turns from the right to the left.
+ *
+ * @const {int} RIGHT_MIN         defines the minimum value (how far to the left) the right tire's actuator can be set to.
+ * @const {int} RIGHT_ORIGIN      defines the origin value the right tire's actuator should use to drive straight.
+ * @const {int} RIGHT_MAX         defines the maximum value (how far to the right) the right tire's actuator can be set to.
+ * As the right values go from 0 -> 1023, the right tire turns from the left to the right.
+ *
+ * @const {int} LEFT_THRESHOLD    
+ * @const {int} RIGHT_THRESHOLD   
+ *
+ * Origin Calibration History:
+ *   (left, right)
+ *   (510, 428) was slightly to the right
+ *   (550, 380) was slightly to the right
+ *   (580, 350) was to the left but could reverse
+ *   (565, 365) was slightly to the left
+ */
 #define LEFT_MIN 425
-// origin
-// less is to the right
-// 510 was slightly to the right
-// 550 was slightly to the right
-// 580 was to the left but could reverse
-// 565 was slightly to the left
 #define LEFT_ORIGIN 580
 #define LEFT_MAX 700
+#define LEFT_THRESHOLD 7
 
 #define RIGHT_MIN 321
-// origin
-// more is to the right
-// 428 was slightly to the right.
-// 380 was slightly to the right
-// 350 was to the left but could reverse
-// 365 was slightly to the left
 #define RIGHT_ORIGIN 350
 #define RIGHT_MAX 645
+#define RIGHT_THRESHOLD 4
 
 class Logger {
   private:
@@ -507,8 +525,8 @@ void setup() {
   int joystick_vertical_pin = A2; // ?
   int joystick_horizontal_threshold = 3;
   int joystick_vertical_threshold = 3;
-  int joystick_horizontal_origin = analogRead(joystick_horizontal_pin);
-  int joystick_vertical_origin = 532; //analogRead(joystick_vertical_pin);
+  int joystick_horizontal_origin = JOYSTICK_HORIZONTAL_ORIGIN; //analogRead(joystick_horizontal_pin);
+  int joystick_vertical_origin = JOYSTICK_VERTICAL_ORIGIN;// 532; //analogRead(joystick_vertical_pin);
   int joystick_relay_switch1 = 8;
   int joystick_relay_switch2 = 9;
 
@@ -521,7 +539,7 @@ void setup() {
   int left_pin_in = A1; // ?
   int left_pin_out_0 = 5; // ?
   int left_pin_out_1 = 4; // ?
-  int left_threshold = 7;
+  int left_threshold = LEFT_THRESHOLD;
   int left_min = LEFT_MIN;
   int left_origin = LEFT_ORIGIN;
   int left_max = LEFT_MAX;
@@ -529,7 +547,7 @@ void setup() {
   int right_pin_in = A0;
   int right_pin_out_0 = 3;
   int right_pin_out_1 = 2;
-  int right_threshold = 4;
+  int right_threshold = RIGHT_THRESHOLD;
   int right_min = RIGHT_MIN;
   int right_origin = RIGHT_ORIGIN;
   int right_max = RIGHT_MAX;
