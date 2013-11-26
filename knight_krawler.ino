@@ -1,3 +1,24 @@
+/* Copyright (c) <2013> Terrence Howard
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 /**
  * @author Terrence Howard <chemisus@gmail.com>
  *
@@ -151,6 +172,9 @@ class Logger {
  * the two output pins should provide the functionality of retracting, extracting, or halting the actuator when
  * set to the appropriate HIGH or LOW states.
  *
+ * When extract() or retract() is called, the hardware actuator will stay in those states and continue extracting
+ * or retracting until stay() is called.
+ *
  * Along with making it easy to extract, retract, or halt the actuator, this class makes it easy to set a target
  * position for the actuator to go to. For this functionality to work, update() must be called continously so that
  * the actuator object will know when to call stay(). The threshold value will be used to determine when it is safe
@@ -272,6 +296,10 @@ class Actuator {
   }
 };
 
+/**
+ * 
+ *
+ */
 class Joystick {
   private:
   Logger* logger;
@@ -628,8 +656,6 @@ class DiagnosticState : public CartState {
   }
   
   void loop() {
-    
-    
     this->logger->print(" jho: ");
     this->logger->print(joystick->getHorizontalOrigin());
     this->logger->print(" jhp: ");
@@ -677,24 +703,24 @@ int last_state;
 void setup() {
   Serial.begin(9600);
 
-  int joystick_horizontal_pin = A3; // ?
-  int joystick_vertical_pin = A2; // ?
+  int joystick_horizontal_pin = A3;
+  int joystick_vertical_pin = A2;
   int joystick_horizontal_threshold = 3;
   int joystick_vertical_threshold = 3;
-  int joystick_horizontal_origin = JOYSTICK_HORIZONTAL_ORIGIN; //analogRead(joystick_horizontal_pin);
-  int joystick_vertical_origin = JOYSTICK_VERTICAL_ORIGIN;// 532; //analogRead(joystick_vertical_pin);
+  int joystick_horizontal_origin = JOYSTICK_HORIZONTAL_ORIGIN;
+  int joystick_vertical_origin = JOYSTICK_VERTICAL_ORIGIN;
   int joystick_relay_switch1 = 8;
   int joystick_relay_switch2 = 9;
 
   int button_pin = 13;
-  int limit_top_pin = -2; // ?
+  int limit_top_pin = -1; // currently not in use; thus the -1;
   int limit_bottom_pin = 12;
-  int relay_up_pin = 6; // ?
-  int relay_down_pin = 7; // ?
+  int relay_up_pin = 6;
+  int relay_down_pin = 7;
   
-  int left_pin_in = A1; // ?
-  int left_pin_out_0 = 5; // ?
-  int left_pin_out_1 = 4; // ?
+  int left_pin_in = A1;
+  int left_pin_out_0 = 5;
+  int left_pin_out_1 = 4;
   int left_threshold = LEFT_THRESHOLD;
   int left_min = LEFT_MIN;
   int left_origin = LEFT_ORIGIN;
