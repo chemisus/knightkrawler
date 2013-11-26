@@ -3,6 +3,9 @@
  *
  */
 
+#define DIAGNOSTIC_MODE false
+#define CART_MODE_DELAY 7
+
 /**
  * @const {int} LEFT_MIN          defines the minimum value (how far to the right) the left tire's actuator can be set to.
  * @const {int} LEFT_ORIGIN       defines the origin value the left tire's actuator should use to drive straight.
@@ -27,13 +30,13 @@
  *   (565, 365) was slightly to the left
  */
 #define LEFT_MIN 425
-#define LEFT_ORIGIN 580
+#define LEFT_ORIGIN 470
 #define LEFT_MAX 700
-#define LEFT_THRESHOLD 7
+#define LEFT_THRESHOLD 6
 
 #define RIGHT_MIN 321
-#define RIGHT_ORIGIN 350
-#define RIGHT_MAX 645
+#define RIGHT_ORIGIN 398 // 350
+#define RIGHT_MAX 600
 #define RIGHT_THRESHOLD 4
 
 /**
@@ -47,7 +50,7 @@
  *
  */
 #define JOYSTICK_HORIZONTAL_ORIGIN analogRead(joystick_horizontal_pin)
-#define JOYSTICK_VERTICAL_ORIGIN 532
+#define JOYSTICK_VERTICAL_ORIGIN 495 //analogRead(joystick_vertical_pin) //532
 
 /**
  *
@@ -226,6 +229,14 @@ class Joystick {
 
     pinMode(pin_v, INPUT);
     pinMode(pin_h, INPUT);
+  }
+  
+  int getHorizontalOrigin() {
+    return this->origin_h;
+  }
+  
+  int getVerticalOrigin() {
+    return this->origin_v;
   }
   
   int getHorizontalPosition() {
@@ -433,7 +444,9 @@ class DriveState : public CartState {
       this->right->turnInside(0);
     }
     
-    this->logger->print(this->joystick->getLeft());
+    this->logger->print(this->joystick->getHorizontalOrigin());
+    this->logger->print(" ");
+    this->logger->print(this->joystick->getHorizontalPosition());
     this->logger->print(" ");
     this->logger->print(this->left->getCurrentPosition());
     this->logger->print(" ");
@@ -445,7 +458,7 @@ class DriveState : public CartState {
     this->motor->drive(vertical);
     /**/
 
-    delay(10);
+    delay(CART_MODE_DELAY);
   }
   
   void start() {
@@ -522,6 +535,60 @@ class RampState : public CartState {
   }
 };
 
+class DiagnosticState : public CartState {
+  private:
+  Logger* logger;
+  Joystick* joystick;
+  Wheel* left;
+  Wheel* right;
+  Button* button;
+  LimitSwitch *limit_bottom;
+  
+  public:
+  DiagnosticState(Logger* logger, Joystick* joystick, Wheel* left, Wheel* right, Button* button, LimitSwitch* limit_bottom) {
+    this->logger = logger;
+    this->joystick = joystick;
+    this->left = left;
+    this->right = right;
+    this->button = button;
+    this->limit_bottom = limit_bottom;
+  }
+  
+  void loop() {
+    
+    
+    this->logger->print(" jho: ");
+    this->logger->print(joystick->getHorizontalOrigin());
+    this->logger->print(" jhp: ");
+    this->logger->print(joystick->getHorizontalPosition());
+    this->logger->print(" jvo: ");
+    this->logger->print(joystick->getVerticalOrigin());
+    this->logger->print(" jvp: ");
+    this->logger->print(joystick->getVerticalPosition());
+    this->logger->print(" lwt: ");
+    this->logger->print(left->getTargetPosition());
+    this->logger->print(" lwp: ");
+    this->logger->print(left->getCurrentPosition());
+    this->logger->print(" rwt: ");
+    this->logger->print(right->getTargetPosition());
+    this->logger->print(" rwp: ");
+    this->logger->print(right->getCurrentPosition());
+    this->logger->print(" btn: ");
+    this->logger->print(button->isPressed());
+    this->logger->print(" lim: ");
+    this->logger->print(limit_bottom->isOn());
+    this->logger->println("");
+    
+    delay(500);
+  }
+  
+  void start() {
+  }
+  
+  void stop() {
+  }
+};
+
 Wheel* left;
 Wheel* right;
 Joystick* joystick;
@@ -579,24 +646,33 @@ void setup() {
   relay_down = new Relay(relay_down_pin);
   motor = new Motor(new Logger());
   
-  cart_states[0] = new DriveState(left, right, joystick, motor, new Logger());  
-  cart_states[1] = new RampState(limit_top, limit_bottom, joystick, relay_up, relay_down, new Logger(true), new Relay(joystick_relay_switch1), new Relay(joystick_relay_switch1));
+  if (DIAGNOSTIC_MODE) {
+    Logger* logger = new Logger(true);
+    cart_states[0] = new DiagnosticState(logger, joystick, left, right, button, limit_bottom);
+  } else {
+    cart_states[0] = new DriveState(left, right, joystick, motor, new Logger(true));  
+    cart_states[1] = new RampState(limit_top, limit_bottom, joystick, relay_up, relay_down, new Logger(true), new Relay(joystick_relay_switch1), new Relay(joystick_relay_switch1));
+  }
 }
 
 void loop() {
-  int current_state = button->isPressed() ? 0 : 1;
-  
-  if (current_state == last_state) {
-    cart_states[current_state]->loop();
-  } else if (last_state != -1) {
-    cart_states[last_state]->stop();
-    
-    delay(2000);
-    cart_states[current_state]->start();
+  if (DIAGNOSTIC_MODE) {
+    cart_states[0]->loop();
   } else {
-    cart_states[current_state]->start();
+    int current_state = button->isPressed() ? 0 : 1;
+    
+    if (current_state == last_state) {
+      cart_states[current_state]->loop();
+    } else if (last_state != -1) {
+      cart_states[last_state]->stop();
+      
+      delay(2000);
+      cart_states[current_state]->start();
+    } else {
+      cart_states[current_state]->start();
+    }
+    
+    last_state = current_state;
   }
-  
-  last_state = current_state;
 }
 
