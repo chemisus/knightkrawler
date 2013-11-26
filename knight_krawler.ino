@@ -146,6 +146,16 @@ class Logger {
 };
 
 /**
+ * The Actuator class controls a hardware actuator. This class assumes that the hardware actuator has one serial 
+ * input pin and two digital output pins. The serial input pin should provide the position of the actuator, and
+ * the two output pins should provide the functionality of retracting, extracting, or halting the actuator when
+ * set to the appropriate HIGH or LOW states.
+ *
+ * Along with making it easy to extract, retract, or halt the actuator, this class makes it easy to set a target
+ * position for the actuator to go to. For this functionality to work, update() must be called continously so that
+ * the actuator object will know when to call stay(). The threshold value will be used to determine when it is safe
+ * to call stay(). The update function will halt when the actuator position falls in the range:
+ * (target-threshold, target+threshold).
  * 
  */
 class Actuator {
@@ -158,6 +168,15 @@ class Actuator {
   int threshold;
   
   public:
+  /**
+   * 
+   * @param {Logger*} logger
+   * @param {int} pin_in
+   * @param {int} pin_out_0
+   * @param {int} pin_out_1
+   * @param {int} threshold
+   * @param {int} target_position
+   */
   Actuator(Logger* logger, int pin_in, int pin_out_0, int pin_out_1, int threshold, int target_position) {
     this->logger = logger;
     
@@ -175,37 +194,71 @@ class Actuator {
     this->stay();
   }
   
+  /**
+   * Returns the current position of the hardware actuator.
+   */
   int getPosition() {
     return analogRead(this->pin_in);
   }
-  
+
+  /**
+   * Returns the value of the threshold.
+   */
   int getThreshold() {
     return this->threshold;
   }
-  
+
+  /**
+   * Returns the value of the target position.
+   */
   int getTargetPosition() {
     return this->target_position;
   }
   
+  /**
+   * Sets the target position of the hardware actuator.
+   */
   void setTargetPosition(int value) {
     this->target_position = value;
   }
   
+  /**
+   * Puts the hardware actuator into retract mode.
+   */
   void retract() {
     digitalWrite(this->pin_out_0, HIGH);
     digitalWrite(this->pin_out_1, LOW);
   }
   
+  /**
+   * Puts the hardware actuator into extract mode.
+   */
   void extract() {
     digitalWrite(this->pin_out_0, LOW);
     digitalWrite(this->pin_out_1, HIGH);
   }
   
+  /**
+   * Tells the hardware actuator to stay at its current position.
+   */
   void stay() {
     digitalWrite(this->pin_out_0, HIGH);
     digitalWrite(this->pin_out_1, HIGH);
   }
-  
+
+  /**
+   * Compares the hardware actuator's current position with the target position and performs
+   * the appropriate retract, extract, or stay command.
+   *
+   * If the current position is greater than the target position plus threshold, then the actuator
+   * will be retracted.
+   *
+   * If the current position is less than the target position minus threshold, then the actuator
+   * will be extracted.
+   *
+   * If none of the above conditions are met, then the actuator is within the threshold range, and 
+   * will stay.
+   */
   void update() {
     int current_position = this->getPosition();
     
