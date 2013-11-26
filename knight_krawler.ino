@@ -53,7 +53,11 @@
 #define JOYSTICK_VERTICAL_ORIGIN 495 //analogRead(joystick_vertical_pin) //532
 
 /**
- *
+ * The Logger class allows developer to turn on/off serial print statements without having to comment them out.
+ * This can be done by setting enabled to true or false, or able to disable all loggers by setting disable_all
+ * to true. The majority of the functions are just pass throughs to a Serial.print*() function with the same
+ * parameters. Any print* function should check to see if the logger is enabled before actuall performing the
+ * Serial.print.
  *
  */
 class Logger {
@@ -62,23 +66,36 @@ class Logger {
   boolean disable_all;
   
   public:
+  /**
+   * @param {boolean} enabled Sets the default enabled state of the logger.
+   */
   Logger(boolean enabled=false) {
     this->enabled = enabled;
     this->disable_all = false;
   }
-  
+
+  /**
+   * Enables the logger.
+   * Note: if disabled_all is true, then the logger will still be disabled.
+   */  
   void enable() {
     this->enabled = true;
   }
-  
+
+  /**
+   * Disables the logger.
+   */  
   void disable() {
     this->enabled = false;
   }
-  
+
+  /**
+   * Returns true if this individual logger is enabled and disable_all is false.
+   */  
   boolean isEnabled() {
     return this->enabled && !this->disable_all;
   }
-  
+
   void print(const char *value) {
     if (this->isEnabled()) {
       Serial.print(value);
@@ -128,6 +145,9 @@ class Logger {
   }
 };
 
+/**
+ * 
+ */
 class Actuator {
   private:
   Logger* logger;
